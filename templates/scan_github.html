@@ -72,6 +72,22 @@
 </div>
 
 {% if result.total_secrets_found > 0 %}
+<div class="severity-breakdown">
+    <h3 class="h5 mb-3">Severity Breakdown</h3>
+    {% if result.severity_counts['CRITICAL'] > 0 %}
+        <span class="badge-critical">CRITICAL: {{ result.severity_counts['CRITICAL'] }}</span>
+    {% endif %}
+    {% if result.severity_counts['HIGH'] > 0 %}
+        <span class="badge-high">HIGH: {{ result.severity_counts['HIGH'] }}</span>
+    {% endif %}
+    {% if result.severity_counts['MEDIUM'] > 0 %}
+        <span class="badge-medium">MEDIUM: {{ result.severity_counts['MEDIUM'] }}</span>
+    {% endif %}
+    {% if result.severity_counts['LOW'] > 0 %}
+        <span class="badge-low">LOW: {{ result.severity_counts['LOW'] }}</span>
+    {% endif %}
+</div>
+
 <div class="card shadow-sm rounded-4 mb-4">
     <div class="card-body">
         <h2 class="h5 mb-3">Secrets by Type</h2>
@@ -110,6 +126,7 @@
                         <th>File</th>
                         <th>Line</th>
                         <th>Type</th>
+                        <th>Severity</th>
                         <th>Value Preview</th>
                     </tr>
                 </thead>
@@ -119,10 +136,21 @@
                         <td><code>{{ file.file }}</code></td>
                         <td>{{ file.line }}</td>
                         <td><span class="badge text-bg-danger">{{ file.secret_type }}</span></td>
+                        <td>
+                            {% if file.severity == 'CRITICAL' %}
+                                <span class="badge-critical">CRITICAL</span>
+                            {% elif file.severity == 'HIGH' %}
+                                <span class="badge-high">HIGH</span>
+                            {% elif file.severity == 'MEDIUM' %}
+                                <span class="badge-medium">MEDIUM</span>
+                            {% else %}
+                                <span class="badge-low">LOW</span>
+                            {% endif %}
+                        </td>
                         <td><code class="text-danger">{{ file.secret_value }}</code></td>
                     </tr>
                     <tr>
-                        <td colspan="4">
+                        <td colspan="5">
                             <pre class="context-box">{{ file.context }}</pre>
                         </td>
                     </tr>

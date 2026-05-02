@@ -281,7 +281,11 @@ def analyze_ui():
         "affected_services": affected_services,
         "time_to_fix_estimate": time_estimate,
         "rotation_plan": plan_data,
-        "severity_counts": severity_counts
+        "severity_counts": severity_counts,
+        "sev_critical": severity_counts["CRITICAL"],
+        "sev_high": severity_counts["HIGH"],
+        "sev_medium": severity_counts["MEDIUM"],
+        "sev_low": severity_counts["LOW"],
     }
 
     return render_template("results.html", error=None, result=result)

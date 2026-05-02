@@ -21,52 +21,66 @@ body {
 }
 
 .badge-critical {
-    background-color: #dc2626 !important;
-    color: white !important;
-    display: inline-block !important;
-    padding: 4px 12px !important;
-    border-radius: 12px !important;
-    font-weight: bold !important;
-    font-size: 13px !important;
-    margin-right: 8px !important;
+    background-color: #dc2626;
+    color: white;
+    display: inline-block;
+    padding: 6px 14px;
+    border-radius: 14px;
+    font-weight: 600;
+    font-size: 12px;
+    margin-right: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .badge-high {
-    background-color: #ea580c !important;
-    color: white !important;
-    display: inline-block !important;
-    padding: 4px 12px !important;
-    border-radius: 12px !important;
-    font-weight: bold !important;
-    font-size: 13px !important;
-    margin-right: 8px !important;
+    background-color: #ea580c;
+    color: white;
+    display: inline-block;
+    padding: 6px 14px;
+    border-radius: 14px;
+    font-weight: 600;
+    font-size: 12px;
+    margin-right: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .badge-medium {
-    background-color: #ca8a04 !important;
-    color: white !important;
-    display: inline-block !important;
-    padding: 4px 12px !important;
-    border-radius: 12px !important;
-    font-weight: bold !important;
-    font-size: 13px !important;
-    margin-right: 8px !important;
+    background-color: #ca8a04;
+    color: white;
+    display: inline-block;
+    padding: 6px 14px;
+    border-radius: 14px;
+    font-weight: 600;
+    font-size: 12px;
+    margin-right: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .badge-low {
-    background-color: #6b7280 !important;
-    color: white !important;
-    display: inline-block !important;
-    padding: 4px 12px !important;
-    border-radius: 12px !important;
-    font-weight: bold !important;
-    font-size: 13px !important;
-    margin-right: 8px !important;
+    background-color: #6b7280;
+    color: white;
+    display: inline-block;
+    padding: 6px 14px;
+    border-radius: 14px;
+    font-weight: 600;
+    font-size: 12px;
+    margin-right: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .severity-breakdown {
-    padding: 1rem;
+    padding: 1.5rem;
     background: white;
     border-radius: 1rem;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    margin-bottom: 1.5rem;
+}
+
+.severity-breakdown h3 {
+    margin-bottom: 1rem;
+    color: #1f2937;
 }
