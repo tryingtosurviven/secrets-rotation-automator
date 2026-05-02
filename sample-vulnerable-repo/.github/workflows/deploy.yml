@@ -10,82 +10,64 @@ jobs:
   deploy:
     name: Deploy Payment Service
     runs-on: ubuntu-latest
-    
-    # [WARNING] SECURITY VULNERABILITY: Hardcoded secrets in workflow file
+
     env:
-      API_KEY_PROD: sk_live_abc123xyz789def456ghi789
-      DB_PASSWORD: super_secret_password_123!@#
-      AWS_ACCESS_KEY: AKIAIOSFODNN7EXAMPLE
-      AWS_SECRET_KEY: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
-      GITHUB_TOKEN: ghp_1234567890abcdefghijklmnopqrstuvwxyz
-      STRIPE_KEY: sk_live_stripe_secret_key_here
-    
+      API_KEY_PROD: demo_stripe_live_key_placeholder_12345
+      DB_PASSWORD: demo_db_password_placeholder_12345
+      AWS_ACCESS_KEY: DEMO_AWS_ACCESS_KEY_PLACEHOLDER
+      AWS_SECRET_KEY: demo_aws_secret_placeholder_value_12345
+      GITHUB_TOKEN: demo_github_token_placeholder_12345
+      STRIPE_KEY: demo_stripe_key_placeholder_12345
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-      
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
-      
+          python-version: "3.11"
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-      
+
       - name: Run tests
         run: |
           pytest tests/ -v
         env:
-          # [WARNING] VULNERABILITY: Exposing secrets to test environment
-          API_KEY: ${{ env.API_KEY_PROD }}
-          DB_PASS: ${{ env.DB_PASSWORD }}
-      
+          API_KEY: \${{ env.API_KEY_PROD }}
+          DB_PASS: \${{ env.DB_PASSWORD }}
+
       - name: Build Docker image
         run: |
           echo "Building Docker image..."
           docker build -t payment-service:latest .
-        env:
-          # [WARNING] VULNERABILITY: Secrets available during build
-          BUILDKIT_PROGRESS: plain
-      
+
       - name: Configure AWS credentials
         run: |
-          # [WARNING] CRITICAL VULNERABILITY: Hardcoded AWS credentials
-          aws configure set aws_access_key_id ${{ env.AWS_ACCESS_KEY }}
-          aws configure set aws_secret_access_key ${{ env.AWS_SECRET_KEY }}
-          aws configure set region us-east-1
-      
+          echo "Configuring demo AWS credentials"
+          echo "\${{ env.AWS_ACCESS_KEY }}"
+          echo "\${{ env.AWS_SECRET_KEY }}"
+
       - name: Deploy to ECS
         run: |
           echo "Deploying to production..."
-          echo "Using API key: ${{ env.API_KEY_PROD }}"
-          echo "Database password: ${{ env.DB_PASSWORD }}"
-          
-          # Deploy application
-          aws ecs update-service \
-            --cluster production-cluster \
-            --service payment-service \
-            --force-new-deployment
-      
+          echo "Using API key: \${{ env.API_KEY_PROD }}"
+          echo "Database password: \${{ env.DB_PASSWORD }}"
+
       - name: Update Kubernetes secrets
         run: |
-          # [WARNING] VULNERABILITY: Applying secrets from file
           kubectl apply -f k8s/secrets.yaml
           kubectl rollout restart deployment/payment-service -n production
         env:
           KUBECONFIG: /tmp/kubeconfig
-      
+
       - name: Notify deployment
         run: |
-          # [WARNING] VULNERABILITY: Secrets in notification
-          curl -X POST https://hooks.slack.com/services/XXX/YYY/ZZZ \
-            -H 'Content-Type: application/json' \
-            -d '{"text": "Deployed with API key: ${{ env.API_KEY_PROD }}" }'
-      
+          echo "Deployment notification sent"
+
       - name: Health check
         run: |
           echo "Running health check..."
-          curl -H "Authorization: Bearer ${{ env.API_KEY_PROD }}" \
-            https://api.example.com/health

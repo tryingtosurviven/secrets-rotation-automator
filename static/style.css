@@ -1,0 +1,21 @@
+body {
+    background: #f8fafc;
+}
+
+.hero-card {
+    background: linear-gradient(135deg, #ffffff, #eef4ff);
+    border: 1px solid #e5e7eb;
+}
+
+.metric-card {
+    border: none;
+}
+
+.context-box {
+    background: #111827;
+    color: #f9fafb;
+    padding: 12px;
+    border-radius: 10px;
+    white-space: pre-wrap;
+    font-size: 0.9rem;
+}

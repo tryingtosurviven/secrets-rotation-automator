@@ -1,7 +1,6 @@
-version: '3.8'
+version: "3.8"
 
 services:
-  # API Service
   api:
     build:
       context: .
@@ -10,16 +9,15 @@ services:
     ports:
       - "5000:5000"
     environment:
-      # [WARNING] SECURITY VULNERABILITY: Hardcoded secrets in docker-compose
-      - API_KEY_PROD=sk_live_abc123xyz789def456ghi789
-      - DB_PASSWORD=super_secret_password_123!@#
+      - API_KEY_PROD=demo_stripe_live_key_placeholder_12345
+      - DB_PASSWORD=demo_db_password_placeholder_12345
       - DATABASE_HOST=db
       - DATABASE_USER=payment_user
-      - AWS_ACCESS_KEY=AKIAIOSFODNN7EXAMPLE
-      - AWS_SECRET_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
-      - GITHUB_TOKEN=ghp_1234567890abcdefghijklmnopqrstuvwxyz
-      - JWT_SECRET=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c
-      - STRIPE_KEY=sk_live_stripe_secret_key_here
+      - AWS_ACCESS_KEY=DEMO_AWS_ACCESS_KEY_PLACEHOLDER
+      - AWS_SECRET_KEY=demo_aws_secret_placeholder_value_12345
+      - GITHUB_TOKEN=demo_github_token_placeholder_12345
+      - JWT_SECRET=demo.jwt.token.placeholder
+      - STRIPE_KEY=demo_stripe_key_placeholder_12345
       - APP_ENV=production
     depends_on:
       - db
@@ -28,21 +26,19 @@ services:
       - payment-network
     restart: unless-stopped
 
-  # Worker Service
   worker:
     build:
       context: .
       dockerfile: Dockerfile.worker
     container_name: payment-worker
     environment:
-      # [WARNING] VULNERABILITY: Same secrets exposed in worker service
-      - API_KEY_PROD=sk_live_abc123xyz789def456ghi789
-      - DB_PASSWORD=super_secret_password_123!@#
+      - API_KEY_PROD=demo_stripe_live_key_placeholder_12345
+      - DB_PASSWORD=demo_db_password_placeholder_12345
       - DATABASE_HOST=db
       - DATABASE_USER=payment_user
-      - AWS_ACCESS_KEY=AKIAIOSFODNN7EXAMPLE
-      - AWS_SECRET_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
-      - SENDGRID_API_KEY=SG.sendgrid_api_key_12345678901234567890
+      - AWS_ACCESS_KEY=DEMO_AWS_ACCESS_KEY_PLACEHOLDER
+      - AWS_SECRET_KEY=demo_aws_secret_placeholder_value_12345
+      - SENDGRID_API_KEY=demo_sendgrid_api_key_placeholder_12345
     depends_on:
       - db
       - redis
@@ -50,18 +46,16 @@ services:
       - payment-network
     restart: unless-stopped
 
-  # Database Service
   db:
     image: mysql:8.0
     container_name: payment-db
     ports:
       - "3306:3306"
     environment:
-      # [WARNING] VULNERABILITY: Hardcoded database root password
-      - MYSQL_ROOT_PASSWORD=mysql_root_pass_2024_prod
+      - MYSQL_ROOT_PASSWORD=demo_mysql_root_password_placeholder
       - MYSQL_DATABASE=payments_db
       - MYSQL_USER=payment_user
-      - MYSQL_PASSWORD=super_secret_password_123!@#
+      - MYSQL_PASSWORD=demo_db_password_placeholder_12345
     volumes:
       - db-data:/var/lib/mysql
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
@@ -69,7 +63,6 @@ services:
       - payment-network
     restart: unless-stopped
 
-  # Redis Service
   redis:
     image: redis:7-alpine
     container_name: payment-redis

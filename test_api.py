@@ -40,13 +40,13 @@ print("-" * 40)
 try:
     response = requests.post(f"{BASE_URL}/api/find-secret-usages", json={
         "repo_path": "sample-vulnerable-repo",
-        "secret_value": "sk_live_abc123xyz789def456ghi789"
+        "secret_value": "demo_stripe_live_key_placeholder_12345"
     })
     result = response.json()
     print(f"Secret Value: {result.get('secret_value')}")
     print(f"Locations Found: {result.get('locations_found')}")
-    for loc in result.get('locations', [])[:3]:  # Show first 3
-        print(f"  - {loc['file']}:{loc['line']}")
+    for loc in result.get('locations', [])[:3]:
+        print(f" - {loc['file']}:{loc['line']}")
     print("✅ PASSED\n")
 except Exception as e:
     print(f"❌ FAILED: {e}\n")
@@ -56,7 +56,7 @@ print("TEST 4: Classify Secret Type")
 print("-" * 40)
 try:
     response = requests.post(f"{BASE_URL}/api/classify-secret", json={
-        "secret_value": "AKIA1234567890ABCDEF"
+        "secret_value": "DEMO_AWS_ACCESS_KEY_PLACEHOLDER"
     })
     result = response.json()
     print(f"Secret Type: {result.get('secret_type')}")

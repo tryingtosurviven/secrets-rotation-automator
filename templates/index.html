@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="hero-card p-4 p-md-5 rounded-4 shadow-sm">
+    <h1 class="display-6 fw-bold mb-3">Secrets Rotation Automator</h1>
+    <p class="lead text-muted">
+        IBM Bob-powered hardcoded secret detection and remediation planning.
+    </p>
+    <p>
+        Scan a repository, identify affected files and services, and generate a safe rotation plan.
+    </p>
+</div>
+
+<div class="row mt-4">
+    <div class="col-lg-7">
+        <div class="card shadow-sm rounded-4">
+            <div class="card-body p-4">
+                <h3 class="h5 mb-3">Analyze a Repository</h3>
+                <form method="POST" action="/analyze-ui">
+                    <div class="mb-3">
+                        <label class="form-label">Repository Path</label>
+                        <input type="text" class="form-control" name="repo_path" value="sample-vulnerable-repo" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Secret Name</label>
+                        <input type="text" class="form-control" name="secret_name" value="API_KEY_PROD" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">Analyze Secret Exposure</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-5 mt-4 mt-lg-0">
+        <div class="card shadow-sm rounded-4 h-100">
+            <div class="card-body p-4">
+                <h3 class="h5 mb-3">What this tool does</h3>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item">✅ Scan codebase for hardcoded secrets</li>
+                    <li class="list-group-item">✅ Find all usages across files</li>
+                    <li class="list-group-item">✅ Identify affected services/modules</li>
+                    <li class="list-group-item">✅ Generate a rotation plan</li>
+                    <li class="list-group-item">✅ Provide rollback and verification guidance</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

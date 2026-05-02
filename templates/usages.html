@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1 class="h3 mb-4">Find Secret Usages</h1>
+
+<div class="card shadow-sm rounded-4 mb-4">
+    <div class="card-body p-4">
+        <form method="POST" action="/usages">
+            <div class="mb-3">
+                <label class="form-label">Repository Path</label>
+                <input type="text" class="form-control" name="repo_path" value="sample-vulnerable-repo" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Secret Value</label>
+                <input type="text" class="form-control" name="secret_value" value="demo_stripe_live_key_placeholder_12345" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Find Usages</button>
+        </form>
+    </div>
+</div>
+
+{% if error %}
+<div class="alert alert-danger">{{ error }}</div>
+{% endif %}
+
+{% if usages %}
+<div class="card shadow-sm rounded-4">
+    <div class="card-body">
+        <h2 class="h5 mb-3">Found {{ usages|length }} usage(s)</h2>
+        {% for usage in usages %}
+        <div class="border rounded-3 p-3 mb-3">
+            <div><strong>File:</strong> {{ usage.file_path }}</div>
+            <div><strong>Line:</strong> {{ usage.line_number }}</div>
+            <div><strong>Type:</strong> {{ usage.secret_type }}</div>
+            <pre class="context-box mt-2">{{ usage.context }}</pre>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}

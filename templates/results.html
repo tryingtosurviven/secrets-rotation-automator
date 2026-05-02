@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1 class="h3 mb-4">Analysis Results</h1>
+
+{% if error %}
+<div class="alert alert-danger">{{ error }}</div>
+{% endif %}
+
+{% if result %}
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="card metric-card shadow-sm rounded-4">
+            <div class="card-body">
+                <div class="small text-muted">Secret Name</div>
+                <div class="fw-bold">{{ result.secret_name }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card metric-card shadow-sm rounded-4">
+            <div class="card-body">
+                <div class="small text-muted">Locations Found</div>
+                <div class="fw-bold">{{ result.locations_found }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card metric-card shadow-sm rounded-4">
+            <div class="card-body">
+                <div class="small text-muted">Affected Services</div>
+                <div class="fw-bold">{{ result.affected_services|length }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card metric-card shadow-sm rounded-4">
+            <div class="card-body">
+                <div class="small text-muted">Estimated Fix Time</div>
+                <div class="fw-bold">{{ result.time_to_fix_estimate }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm rounded-4 mb-4">
+    <div class="card-body">
+        <h2 class="h5 mb-3">Affected Services</h2>
+        {% for service in result.affected_services %}
+            <span class="badge text-bg-dark me-2 mb-2">{{ service }}</span>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="card shadow-sm rounded-4 mb-4">
+    <div class="card-body">
+        <h2 class="h5 mb-3">Affected Files</h2>
+        <div class="table-responsive">
+            <table class="table table-striped align-middle">
+                <thead>
+                    <tr>
+                        <th>File</th>
+                        <th>Line</th>
+                        <th>Type</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for file in result.files %}
+                    <tr>
+                        <td>{{ file.file }}</td>
+                        <td>{{ file.line }}</td>
+                        <td>{{ file.secret_type }}</td>
+                    </tr>
+                    <tr>
+                        <td colspan="3">
+                            <pre class="context-box">{{ file.context }}</pre>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm rounded-4 mb-4">
+    <div class="card-body">
+        <h2 class="h5 mb-3">Rotation Plan</h2>
+
+        <h3 class="h6">Steps</h3>
+        <ol>
+            {% for step in result.rotation_plan.step_by_step_plan %}
+            <li>{{ step }}</li>
+            {% endfor %}
+        </ol>
+
+        <h3 class="h6 mt-4">Verification Checks</h3>
+        <ul>
+            {% for item in result.rotation_plan.verification_checks %}
+            <li>{{ item }}</li>
+            {% endfor %}
+        </ul>
+
+        <h3 class="h6 mt-4">Rollback Plan</h3>
+        <ul>
+            {% for item in result.rotation_plan.rollback_plan %}
+            <li>{{ item }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
