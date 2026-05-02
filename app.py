@@ -12,7 +12,7 @@ from flask_cors import CORS
 
 from secret_detector import detect_secrets, find_secret_usages, classify_secret_type
 
-DEBUG = True
+DEBUG = os.environ.get("FLASK_DEBUG", "false").lower() == "true"
 PORT = 5000
 HOST = "0.0.0.0"
 VERSION = "1.0.0"

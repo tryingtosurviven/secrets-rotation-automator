@@ -248,7 +248,7 @@ def _is_false_positive(secret_value: str, line: str) -> bool:
     line_lower = line.lower()
     
     for indicator in false_positive_indicators:
-        if indicator in secret_lower or indicator in line_lower:
+        if indicator in secret_lower:
             return True
     
     # Skip very short passwords (likely not real)

@@ -46,7 +46,7 @@ try:
     print(f"Secret Value: {result.get('secret_value')}")
     print(f"Locations Found: {result.get('locations_found')}")
     for loc in result.get('locations', [])[:3]:
-        print(f" - {loc['file']}:{loc['line']}")
+        print(f" - {loc['file_path']}:{loc['line_number']}")
     print("✅ PASSED\n")
 except Exception as e:
     print(f"❌ FAILED: {e}\n")
