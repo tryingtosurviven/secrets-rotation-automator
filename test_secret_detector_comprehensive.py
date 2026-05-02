@@ -124,7 +124,7 @@ class TestClassifySecretTypeFailing:
     
     def test_classify_none_value(self):
         """Test None value returns UNKNOWN."""
-        assert classify_secret_type(None) == "UNKNOWN"
+        assert classify_secret_type(None) == "UNKNOWN"  # type: ignore[arg-type]
     
     def test_classify_random_string(self):
         """Test random string returns UNKNOWN."""
@@ -725,7 +725,7 @@ class TestFindSecretUsagesFailing:
     def test_find_usages_none_secret(self):
         """Test error when secret value is None."""
         with pytest.raises(ValueError, match="cannot be empty"):
-            find_secret_usages(".", None)
+            find_secret_usages(".", None)  # type: ignore[arg-type]
     
     def test_find_usages_secret_not_found(self):
         """Test finding non-existent secret returns empty list."""

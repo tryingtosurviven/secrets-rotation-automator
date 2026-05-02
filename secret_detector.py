@@ -77,6 +77,27 @@ SECRET_PATTERNS = {
 }
 
 
+def _get_severity(secret_type: str) -> str:
+    """
+    Get the severity level for a secret type.
+    
+    Args:
+        secret_type: The type of secret
+        
+    Returns:
+        str: Severity level (CRITICAL, HIGH, MEDIUM, or LOW)
+    """
+    severity_map = {
+        "PRIVATE_KEY": "CRITICAL",
+        "AWS_KEY": "CRITICAL",
+        "API_KEY": "HIGH",
+        "GITHUB_TOKEN": "HIGH",
+        "PASSWORD": "HIGH",
+        "JWT_TOKEN": "MEDIUM",
+        "UNKNOWN": "LOW"
+    }
+    return severity_map.get(secret_type, "LOW")
+
 
 def classify_secret_type(secret_value: str) -> str:
     """
@@ -209,7 +230,7 @@ def _scan_file(file_path: str, repo_path: str) -> List[Dict]:
                             'file_path': relative_path,
                             'line_number': line_num,
                             'context': context,
-                            'severity': 'CRITICAL'
+                            'severity': _get_severity(secret_type)
                         }
                         
                         secrets_found.append(secret_info)
@@ -367,7 +388,7 @@ def find_secret_usages(repo_path: str, secret_value: str) -> List[Dict]:
                                     'file_path': relative_path,
                                     'line_number': line_num,
                                     'context': context,
-                                    'severity': 'CRITICAL'
+                                    'severity': _get_severity(secret_type)
                                 }
                                 
                                 usages.append(usage_info)

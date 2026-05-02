@@ -8,6 +8,7 @@
 {% endif %}
 
 {% if result %}
+<pre style="background:yellow;padding:10px">{{ result | tojson }}</pre>
 <div class="row g-4 mb-4">
     <div class="col-md-3">
         <div class="card metric-card shadow-sm rounded-4">
@@ -29,7 +30,7 @@
         <div class="card metric-card shadow-sm rounded-4">
             <div class="card-body">
                 <div class="small text-muted">Affected Services</div>
-                <div class="fw-bold">{{ result.affected_services|length }}</div>
+                <div class="fw-bold">{{ result.affected_services|length if result.affected_services else 0 }}</div>
             </div>
         </div>
     </div>
@@ -43,6 +44,29 @@
     </div>
 </div>
 
+{% if result.locations_found > 0 %}
+<div class="severity-breakdown mb-4">
+    <h3 class="h5 mb-3">Severity Breakdown</h3>
+    {% if result.severity_counts.CRITICAL > 0 %}
+        <span class="badge-critical">CRITICAL: {{ result.severity_counts.CRITICAL }}</span>
+    {% endif %}
+    {% if result.severity_counts.HIGH > 0 %}
+        <span class="badge-high">HIGH: {{ result.severity_counts.HIGH }}</span>
+    {% endif %}
+    {% if result.severity_counts.MEDIUM > 0 %}
+        <span class="badge-medium">MEDIUM: {{ result.severity_counts.MEDIUM }}</span>
+    {% endif %}
+    {% if result.severity_counts.LOW > 0 %}
+        <span class="badge-low">LOW: {{ result.severity_counts.LOW }}</span>
+    {% endif %}
+</div>
+{% else %}
+<div class="alert alert-success mb-4">
+    ✅ No secrets found! This repository follows security best practices.
+</div>
+{% endif %}
+
+{% if result.affected_services and result.locations_found > 0 %}
 <div class="card shadow-sm rounded-4 mb-4">
     <div class="card-body">
         <h2 class="h5 mb-3">Affected Services</h2>
@@ -51,7 +75,9 @@
         {% endfor %}
     </div>
 </div>
+{% endif %}
 
+{% if result.locations_found > 0 %}
 <div class="card shadow-sm rounded-4 mb-4">
     <div class="card-body">
         <h2 class="h5 mb-3">Affected Files</h2>
@@ -62,6 +88,7 @@
                         <th>File</th>
                         <th>Line</th>
                         <th>Type</th>
+                        <th>Severity</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -70,9 +97,20 @@
                         <td>{{ file.file }}</td>
                         <td>{{ file.line }}</td>
                         <td>{{ file.secret_type }}</td>
+                        <td>
+                            {% if file.severity == 'CRITICAL' %}
+                                <span class="badge-critical">CRITICAL</span>
+                            {% elif file.severity == 'HIGH' %}
+                                <span class="badge-high">HIGH</span>
+                            {% elif file.severity == 'MEDIUM' %}
+                                <span class="badge-medium">MEDIUM</span>
+                            {% else %}
+                                <span class="badge-low">LOW</span>
+                            {% endif %}
+                        </td>
                     </tr>
                     <tr>
-                        <td colspan="3">
+                        <td colspan="4">
                             <pre class="context-box">{{ file.context }}</pre>
                         </td>
                     </tr>
@@ -82,7 +120,9 @@
         </div>
     </div>
 </div>
+{% endif %}
 
+{% if result.rotation_plan and result.locations_found > 0 %}
 <div class="card shadow-sm rounded-4 mb-4">
     <div class="card-body">
         <h2 class="h5 mb-3">Rotation Plan</h2>
@@ -109,5 +149,6 @@
         </ul>
     </div>
 </div>
+{% endif %}
 {% endif %}
 {% endblock %}

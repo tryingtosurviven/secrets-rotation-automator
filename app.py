@@ -4,11 +4,14 @@ Secrets Rotation Automator - Flask App with Debug Home Route
 
 import os
 import logging
+import tempfile
+import shutil
 from datetime import datetime
-from typing import Dict, List, Any, Tuple
+from typing import Dict, List, Any, Literal, Tuple
 
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
+from git import Repo, GitCommandError
 
 from secret_detector import detect_secrets, find_secret_usages, classify_secret_type
 
@@ -74,25 +77,102 @@ def _extract_affected_services(files: List[Dict]) -> List[str]:
         if ".github" in lower_path or "workflow" in lower_path:
             services.add("CI/CD")
 
-    return sorted(list(services)) if services else ["Unknown"]
+    return sorted(list(services)) if services else []
 
 def _estimate_time_to_fix(locations_count: int, affected_services: List[str]) -> str:
+    # 1. Force an early exit. If no secrets found, time is always 0.
+    if not locations_count or locations_count <= 0:
+        return "0 minutes"
+    
+    # 2. Calculate time (15 mins per secret-service pair based on your logic)
+    # Using 4 errors/4 services as an example: (4*5) + (4*10) = 60
     base_time = locations_count * 5
     service_time = len(affected_services) * 10
     total_minutes = base_time + service_time
 
+    # 3. Formatting
     if total_minutes < 60:
         return f"{total_minutes} minutes"
 
     hours = total_minutes // 60
     minutes = total_minutes % 60
+    
     if minutes > 0:
         return f"{hours} hour{'s' if hours > 1 else ''} {minutes} minutes"
     return f"{hours} hour{'s' if hours > 1 else ''}"
 
-def _generate_rotation_plan_data(secret_name: str, affected_services: List[str], files: List[str]) -> Dict:
-    return {
-        "step_by_step_plan": [
+def _generate_rotation_plan_data(secret_name: str, affected_services: List[str], files: List[str], secret_type: str = "UNKNOWN") -> Dict:
+    actual_services = affected_services if files else []
+    
+    # Type-aware rotation steps
+    if secret_type == "AWS_KEY":
+        step_by_step_plan = [
+            "Backup current configuration and affected files",
+            "Go to AWS IAM Console → Security Credentials → Create new access key",
+            "Update secret management or environment configuration with new key",
+            f"Update {len(files)} affected file(s)",
+            "Deploy changes to staging and run tests",
+            "Deploy safely to production",
+            "Verify all affected services are healthy",
+            "Deactivate and delete old key in IAM Console"
+        ]
+    elif secret_type == "API_KEY":
+        step_by_step_plan = [
+            "Backup current configuration and affected files",
+            "Go to the API provider dashboard and generate a new API key",
+            "Update secret management or environment configuration",
+            f"Update {len(files)} affected file(s)",
+            "Deploy changes to staging and run tests",
+            "Deploy safely to production",
+            "Verify all affected services are healthy",
+            "Revoke the old API key in the provider dashboard"
+        ]
+    elif secret_type == "PASSWORD":
+        step_by_step_plan = [
+            "Backup current configuration and affected files",
+            "Use a password manager to generate a strong replacement (min 16 chars)",
+            "Update secret management or environment configuration",
+            f"Update {len(files)} affected file(s)",
+            "Deploy changes to staging and run tests",
+            "Deploy safely to production",
+            "Verify all affected services are healthy",
+            "Confirm old password is no longer valid"
+        ]
+    elif secret_type == "GITHUB_TOKEN":
+        step_by_step_plan = [
+            "Backup current configuration and affected files",
+            "Go to GitHub Settings → Developer settings → Personal access tokens → Regenerate token",
+            "Update secret management or environment configuration",
+            f"Update {len(files)} affected file(s)",
+            "Deploy changes to staging and run tests",
+            "Deploy safely to production",
+            "Verify all affected services are healthy",
+            "Confirm old token is revoked"
+        ]
+    elif secret_type == "PRIVATE_KEY":
+        step_by_step_plan = [
+            "Backup current configuration and affected files",
+            "Generate new keypair with ssh-keygen -t ed25519 or openssl genrsa",
+            "Update secret management or environment configuration",
+            f"Update {len(files)} affected file(s)",
+            "Deploy changes to staging and run tests",
+            "Deploy safely to production",
+            "Verify all affected services are healthy",
+            "Remove old private key from all systems"
+        ]
+    elif secret_type == "JWT_TOKEN":
+        step_by_step_plan = [
+            "Backup current configuration and affected files",
+            "Generate new JWT secret (min 32 chars, cryptographically random)",
+            "Note: all existing tokens will be invalidated",
+            "Update secret management or environment configuration",
+            f"Update {len(files)} affected file(s)",
+            "Deploy changes to staging and run tests",
+            "Deploy safely to production",
+            "Verify all affected services are healthy"
+        ]
+    else:  # UNKNOWN or default
+        step_by_step_plan = [
             "Backup current configuration and affected files",
             f"Generate a new value for {secret_name}",
             "Update secret management or environment configuration",
@@ -101,7 +181,10 @@ def _generate_rotation_plan_data(secret_name: str, affected_services: List[str],
             "Deploy safely to production",
             "Verify all affected services are healthy",
             "Revoke the old secret after verification"
-        ],
+        ]
+    
+    return {
+        "step_by_step_plan": step_by_step_plan,
         "rollback_plan": [
             "Restore previous configuration",
             "Redeploy previous known-good version",
@@ -114,7 +197,7 @@ def _generate_rotation_plan_data(secret_name: str, affected_services: List[str],
             "Verify integrations still work",
             "Run automated tests"
         ],
-        "estimated_time": _estimate_time_to_fix(len(files), affected_services)
+        "estimated_time": _estimate_time_to_fix(len(files), actual_services)
     }
 
 # ----------------------------
@@ -149,20 +232,45 @@ def analyze_ui():
         if secret_name.lower() in s.get("file_path", "").lower()
         or secret_name.lower() in s.get("context", "").lower()
     ]
+    
+    # Debug logging
+    logger.info(f"Search term: '{secret_name}', All secrets: {len(all_secrets)}, Matching: {len(matching_secrets)}")
+    for s in all_secrets:
+        context = s.get('context', '')
+        context_preview = context[:50] if context else 'None'
+        logger.info(f"Secret: file={s.get('file_path')}, type={s.get('secret_type')}, context={context_preview}...")
 
     files = [
         {
             "file": secret["file_path"],
             "line": secret["line_number"],
             "context": secret["context"],
-            "secret_type": secret["secret_type"]
+            "secret_type": secret["secret_type"],
+            "severity": secret.get("severity", "LOW")
         }
         for secret in matching_secrets
     ]
 
+    # Calculate severity counts
+    severity_counts = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0}
+    for f in files:
+        sev = f.get("severity", "LOW")
+        if sev in severity_counts:
+            severity_counts[sev] += 1
+
     affected_services = _extract_affected_services(matching_secrets)
     time_estimate = _estimate_time_to_fix(len(matching_secrets), affected_services)
-    plan_data = _generate_rotation_plan_data(secret_name, affected_services, [f["file"] for f in files])
+    
+    # Determine most common secret type for rotation plan
+    most_common_type = "UNKNOWN"
+    if matching_secrets:
+        type_counts = {}
+        for s in matching_secrets:
+            stype = s.get("secret_type", "UNKNOWN")
+            type_counts[stype] = type_counts.get(stype, 0) + 1
+        most_common_type = max(type_counts, key=lambda k: type_counts[k]) if type_counts else "UNKNOWN"
+    
+    plan_data = _generate_rotation_plan_data(secret_name, affected_services, [f["file"] for f in files], most_common_type) if matching_secrets else None
 
     result = {
         "secret_name": secret_name,
@@ -170,7 +278,8 @@ def analyze_ui():
         "files": files,
         "affected_services": affected_services,
         "time_to_fix_estimate": time_estimate,
-        "rotation_plan": plan_data
+        "rotation_plan": plan_data,
+        "severity_counts": severity_counts
     }
 
     return render_template("results.html", error=None, result=result)
@@ -191,6 +300,103 @@ def usages_ui():
 
     usages = find_secret_usages(repo_path, secret_value)
     return render_template("usages.html", error=None, usages=usages, secret_value=secret_value)
+
+@app.route("/scan-github", methods=["GET", "POST"])
+def scan_github():
+    """Scan a GitHub repository for secrets."""
+    if request.method == "GET":
+        return render_template("scan_github.html", error=None, result=None)
+    
+    github_url = request.form.get("github_url", "").strip()
+    
+    if not github_url:
+        return render_template("scan_github.html", error="GitHub URL is required.", result=None)
+    
+    # Validate GitHub URL format
+    if not (github_url.startswith("https://github.com/") or github_url.startswith("http://github.com/")):
+        return render_template("scan_github.html", error="Invalid GitHub URL. Must start with https://github.com/", result=None)
+    
+    temp_dir = None
+    try:
+        # Create temporary directory
+        temp_dir = tempfile.mkdtemp(prefix="github_scan_")
+        logger.info(f"Cloning repository {github_url} to {temp_dir}")
+        
+        # Clone the repository
+        try:
+            Repo.clone_from(github_url, temp_dir, depth=1)
+        except GitCommandError as e:
+            logger.error(f"Git clone failed: {e}")
+            return render_template("scan_github.html",
+                                 error=f"Failed to clone repository. Please check the URL and ensure the repository is public. Error: {str(e)}",
+                                 result=None)
+        
+        # Scan for secrets
+        logger.info(f"Scanning {temp_dir} for secrets")
+        all_secrets = detect_secrets(temp_dir)
+        
+        # Group secrets by type
+        secrets_by_type = {}
+        for secret in all_secrets:
+            secret_type = secret.get("secret_type", "UNKNOWN")
+            if secret_type not in secrets_by_type:
+                secrets_by_type[secret_type] = []
+            secrets_by_type[secret_type].append(secret)
+        
+        # Prepare files list for rotation plan
+        files = [
+            {
+                "file": secret["file_path"],
+                "line": secret["line_number"],
+                "context": secret["context"],
+                "secret_type": secret["secret_type"],
+                "severity": secret.get("severity", "LOW"),
+                "secret_value": secret["secret_value"][:20] + "..." if len(secret["secret_value"]) > 20 else secret["secret_value"]
+            }
+            for secret in all_secrets
+        ]
+        
+        # Calculate severity counts
+        severity_counts = {"CRITICAL": 0, "HIGH": 0, "MEDIUM": 0, "LOW": 0}
+        for f in files:
+            sev = f.get("severity", "LOW")
+            if sev in severity_counts:
+                severity_counts[sev] += 1
+        
+        # Extract affected services
+        affected_services = _extract_affected_services(all_secrets)
+        
+        # Generate rotation plan (use UNKNOWN for mixed scans)
+        time_estimate = _estimate_time_to_fix(len(all_secrets), affected_services)
+        rotation_plan = _generate_rotation_plan_data("All Secrets", affected_services, [f["file"] for f in files], "UNKNOWN")
+        
+        result = {
+            "github_url": github_url,
+            "total_secrets_found": len(all_secrets),
+            "secrets_by_type": secrets_by_type,
+            "files": files,
+            "affected_services": affected_services,
+            "time_to_fix_estimate": time_estimate,
+            "rotation_plan": rotation_plan,
+            "severity_counts": severity_counts
+        }
+        
+        logger.info(f"Scan complete. Found {len(all_secrets)} secrets in {github_url}")
+        return render_template("scan_github.html", error=None, result=result)
+        
+    except Exception as e:
+        logger.error(f"Error scanning GitHub repository: {e}", exc_info=True)
+        return render_template("scan_github.html",
+                             error=f"An error occurred while scanning the repository: {str(e)}",
+                             result=None)
+    finally:
+        # Clean up temporary directory
+        if temp_dir and os.path.exists(temp_dir):
+            try:
+                shutil.rmtree(temp_dir)
+                logger.info(f"Cleaned up temporary directory: {temp_dir}")
+            except Exception as e:
+                logger.warning(f"Failed to clean up temporary directory {temp_dir}: {e}")
 
 # ----------------------------
 # API Routes
@@ -333,7 +539,7 @@ def generate_rotation_plan():
         if not secret_name:
             return _format_error_response("Missing Secret Name", "secret_name is required", 400)
 
-        plan_data = _generate_rotation_plan_data(secret_name, affected_services or ["Unknown"], files or [])
+        plan_data = _generate_rotation_plan_data(secret_name, affected_services or [], files or [])
 
         return _format_response({
             "secret_name": secret_name,
