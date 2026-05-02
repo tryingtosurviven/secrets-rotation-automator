@@ -27,7 +27,7 @@ print("\n" + "="*70)
 print("Test 2: Finding usages of specific API key...")
 print("="*70 + "\n")
 
-api_key = 'sk_live_abc123xyz789def456ghi789'
+api_key = 'demo_stripe_live_key_placeholder_12345'
 usages = find_secret_usages('sample-vulnerable-repo', api_key)
 print(f"Found {len(usages)} usages of API key: {api_key}\n")
 
@@ -39,7 +39,7 @@ print("\n" + "="*70)
 print("Test 3: Finding usages of database password...")
 print("="*70 + "\n")
 
-db_password = 'super_secret_password_123!@#'
+db_password = 'demo_db_password_placeholder_12345'
 usages = find_secret_usages('sample-vulnerable-repo', db_password)
 print(f"Found {len(usages)} usages of DB password\n")
 

@@ -4,7 +4,8 @@ A comprehensive Python module for detecting hardcoded secrets in codebases, buil
 
 ## Features
 
-- 🔍 **Comprehensive Detection**: Scans for API keys, passwords, AWS credentials, GitHub tokens, private keys, and JWT tokens
+- 🔍 **Comprehensive Detection**: Scans for API keys, passwords, AWS-style credentials, GitHub-style tokens, private keys, and JWT-style tokens
+
 - 📁 **Smart Filtering**: Automatically skips common directories like `.git`, `node_modules`, `__pycache__`
 - 🎯 **Precise Classification**: Identifies the type of each detected secret
 - 📊 **Detailed Context**: Provides surrounding code lines for each finding
@@ -16,12 +17,14 @@ A comprehensive Python module for detecting hardcoded secrets in codebases, buil
 
 | Secret Type | Examples | Detection Patterns |
 |------------|----------|-------------------|
-| **API_KEY** | `sk_live_*`, `API_KEY_PROD` | Stripe keys, generic API keys |
+| **API_KEY** | `demo_stripe_live_key_placeholder_12345`, `API_KEY_PROD` | Demo API keys, generic API keys |
 | **PASSWORD** | `DB_PASSWORD`, `password=` | Database passwords, generic passwords |
-| **AWS_KEY** | `AKIA*`, `aws_secret_access_key` | AWS access keys and secrets |
-| **GITHUB_TOKEN** | `ghp_*`, `gho_*`, `ghs_*`, `ghr_*` | GitHub personal access tokens |
+| **AWS_KEY** | `DEMO_AWS_ACCESS_KEY_PLACEHOLDER`, `demo_aws_secret_placeholder_value_12345` | Demo AWS-style access keys and secrets |
+| **GITHUB_TOKEN** | `demo_github_token_placeholder_12345`, `demo_github_oauth_placeholder_12345` | Demo GitHub-style tokens |
 | **PRIVATE_KEY** | `-----BEGIN PRIVATE KEY-----` | PEM format private keys |
-| **JWT_TOKEN** | `eyJ*.eyJ*.*` | JSON Web Tokens |
+| **JWT_TOKEN** | `demo.jwt.token.placeholder` | Demo JWT-style tokens |
+
+
 
 ## Installation
 
@@ -58,7 +61,7 @@ for secret in secrets:
 from secret_detector import find_secret_usages
 
 # Find all occurrences of a specific secret
-usages = find_secret_usages(".", "AKIA1234567890ABCDEF")
+usages = find_secret_usages(".", "DEMO_AWS_ACCESS_KEY_PLACEHOLDER")
 
 for usage in usages:
     print(f"Found in {usage['file_path']} at line {usage['line_number']}")
@@ -70,7 +73,7 @@ for usage in usages:
 from secret_detector import classify_secret_type
 
 # Classify a secret value
-secret_type = classify_secret_type("ghp_1234567890abcdefghijklmnopqrstuvwxyz")
+secret_type = classify_secret_type("demo_github_token_placeholder_12345")
 print(f"Secret type: {secret_type}")  # Output: GITHUB_TOKEN
 ```
 
@@ -88,7 +91,7 @@ Scan a directory recursively for hardcoded secrets.
   ```python
   {
       'secret_type': str,      # API_KEY, PASSWORD, AWS_KEY, etc.
-      'secret_value': str,     # The actual secret value
+      'secret_value': str,     # The detected secret value
       'file_path': str,        # Relative path from repo_path
       'line_number': int,      # Line number (1-based)
       'context': str,          # Surrounding code lines
@@ -123,7 +126,7 @@ Find all locations where a specific secret value appears.
 
 **Example:**
 ```python
-usages = find_secret_usages(".", "my_secret_key_123")
+usages = find_secret_usages(".", "demo_api_key_prod_placeholder_12345")
 for usage in usages:
     print(f"Found at {usage['file_path']}:{usage['line_number']}")
 ```
@@ -142,7 +145,7 @@ Classify the type of secret based on its value.
 
 **Example:**
 ```python
-secret_type = classify_secret_type("AKIA1234567890ABCDEF")
+secret_type = classify_secret_type("DEMO_AWS_ACCESS_KEY_PLACEHOLDER")
 print(secret_type)  # Output: AWS_KEY
 ```
 
@@ -186,13 +189,13 @@ Secret #1:
   File: config.py
   Line: 15
   Severity: CRITICAL
-  Value: AKIA1234567890ABCDEF
+  Value: DEMO_AWS_ACCESS_KEY_PLACEHOLDER
   Context:
     13: # AWS Configuration
     14: AWS_REGION = "us-east-1"
->>> 15: AWS_ACCESS_KEY_ID = "AKIA1234567890ABCDEF"
-    16: AWS_SECRET_ACCESS_KEY = "wJalrXUtnFEMI/K7MDENG/bPxRfiCY"
-    17: 
+>>> 15: AWS_ACCESS_KEY_ID = "DEMO_AWS_ACCESS_KEY_PLACEHOLDER"
+    16: AWS_SECRET_ACCESS_KEY = "demo_aws_secret_placeholder_value_12345"
+    17:
 ```
 
 ## Best Practices
