@@ -14,6 +14,7 @@ from flask_cors import CORS
 from git import Repo, GitCommandError
 
 from secret_detector import detect_secrets, find_secret_usages, classify_secret_type
+from secret_fixer import fix_all_secrets
 
 DEBUG = os.environ.get("FLASK_DEBUG", "false").lower() == "true"
 PORT = 5000
@@ -607,6 +608,120 @@ def bob_refactor():
         "fixed": fixed_line,
         "explanation": f"Bob identified a hardcoded secret in {file_path}. He refactored it to use an environment variable for secure runtime injection."
     })
+
+@app.route("/api/fix-all-secrets", methods=["POST"])
+def fix_all_secrets_api():
+    """
+    Fix all detected secrets in a repository by replacing them with environment variables.
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return _format_error_response("Bad Request", "Request body must be valid JSON", 400)
+        
+        repo_path = data.get("repo_path", "").strip()
+        secret_name = data.get("secret_name", "").strip()
+        
+        if not _validate_repo_path(repo_path):
+            return _format_error_response("Invalid Repository Path", f"Invalid path: {repo_path}", 400)
+        
+        if not secret_name:
+            return _format_error_response("Missing Secret Name", "secret_name is required", 400)
+        
+        # Detect all secrets matching the secret name
+        all_secrets = detect_secrets(repo_path)
+        matching_secrets = [
+            s for s in all_secrets
+            if secret_name.lower() in s.get("file_path", "").lower()
+            or secret_name.lower() in s.get("context", "").lower()
+        ]
+        
+        if not matching_secrets:
+            return _format_response({
+                "success": False,
+                "message": "No secrets found to fix",
+                "fixed_count": 0
+            })
+        
+        # Fix all secrets
+        logger.info(f"Fixing {len(matching_secrets)} secrets in {repo_path}")
+        results = fix_all_secrets(matching_secrets, repo_path, create_backup_flag=True)
+        
+        response = {
+            "success": results['success'],
+            "message": f"Fixed {results['fixed_count']} secrets, {results['failed_count']} failed",
+            "fixed_count": results['fixed_count'],
+            "failed_count": results['failed_count'],
+            "backup_created": results['backup_created'],
+            "backup_path": results['backup_path'],
+            "env_file_created": results['env_file_created'],
+            "env_vars": results['env_vars'],
+            "details": results['details'],
+            "timestamp": datetime.utcnow().isoformat() + "Z"
+        }
+        
+        return _format_response(response)
+    
+    except Exception as e:
+        logger.error(f"Error fixing secrets: {e}", exc_info=True)
+        return _format_error_response("Internal Server Error", str(e), 500)
+
+@app.route("/api/revert-repo", methods=["POST"])
+def revert_repo():
+    """
+    Revert the sample-vulnerable-repo back to its original state with hardcoded secrets.
+    This allows testers to run the demo multiple times.
+    Keeps the permanent backup (sample-vulnerable-repo_backup) intact.
+    """
+    try:
+        data = request.get_json()
+        if not data:
+            return _format_error_response("Bad Request", "Request body must be valid JSON", 400)
+        
+        repo_path = data.get("repo_path", "").strip()
+        
+        if not repo_path or repo_path != "sample-vulnerable-repo":
+            return _format_error_response("Invalid Repository", "Only sample-vulnerable-repo can be reverted", 400)
+        
+        # Use the permanent backup
+        permanent_backup = "sample-vulnerable-repo_backup"
+        
+        # Check if permanent backup exists
+        if not os.path.exists(permanent_backup):
+            return _format_response({
+                "success": False,
+                "message": "Permanent backup not found. Please ensure sample-vulnerable-repo_backup exists.",
+                "reverted": False
+            })
+        
+        logger.info(f"Reverting {repo_path} from permanent backup {permanent_backup}")
+        
+        # Remove current repo
+        if os.path.exists(repo_path):
+            shutil.rmtree(repo_path)
+        
+        # Restore from permanent backup (copy, don't move)
+        shutil.copytree(permanent_backup, repo_path)
+        
+        # Remove .env.example if it exists in the restored repo
+        env_example = os.path.join(repo_path, '.env.example')
+        if os.path.exists(env_example):
+            os.remove(env_example)
+        
+        logger.info(f"Successfully reverted {repo_path} to original state")
+        
+        response = {
+            "success": True,
+            "message": "Repository reverted to original state with hardcoded secrets",
+            "reverted": True,
+            "timestamp": datetime.utcnow().isoformat() + "Z"
+        }
+        
+        return _format_response(response)
+    
+    except Exception as e:
+        logger.error(f"Error reverting repository: {e}", exc_info=True)
+        return _format_error_response("Internal Server Error", str(e), 500)
 
 if __name__ == "__main__":
     logger.info(f"Starting {APP_NAME} v{VERSION}")

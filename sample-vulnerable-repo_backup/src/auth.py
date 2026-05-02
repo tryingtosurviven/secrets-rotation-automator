@@ -3,7 +3,8 @@ Authentication module for user management.
 Handles user authentication and profile retrieval.
 """
 
-API_KEY_PROD = "demo_stripe_live_key_placeholder_12345"
+import os
+API_KEY_PROD = "os.getenv("API_KEY_6")"
 
 import requests
 from flask import Flask, request, jsonify

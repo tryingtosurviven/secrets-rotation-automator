@@ -9,8 +9,8 @@ services:
     ports:
       - "5000:5000"
     environment:
-      - API_KEY_PROD=${API_KEY_12}
-      - DB_PASSWORD=${PASSWORD_13}
+      - API_KEY_PROD=demo_stripe_live_key_placeholder_12345
+      - DB_PASSWORD=demo_db_password_placeholder_12345
       - DATABASE_HOST=db
       - DATABASE_USER=payment_user
       - AWS_ACCESS_KEY=DEMO_AWS_ACCESS_KEY_PLACEHOLDER
@@ -32,13 +32,13 @@ services:
       dockerfile: Dockerfile.worker
     container_name: payment-worker
     environment:
-      - API_KEY_PROD=${API_KEY_35}
-      - DB_PASSWORD=${PASSWORD_36}
+      - API_KEY_PROD=demo_stripe_live_key_placeholder_12345
+      - DB_PASSWORD=demo_db_password_placeholder_12345
       - DATABASE_HOST=db
       - DATABASE_USER=payment_user
-      - AWS_ACCESS_KEY=${AWS_KEY_39}
-      - AWS_SECRET_KEY=${AWS_KEY_40}
-      - SENDGRID_${API_KEY_41}
+      - AWS_ACCESS_KEY=DEMO_AWS_ACCESS_KEY_PLACEHOLDER
+      - AWS_SECRET_KEY=demo_aws_secret_placeholder_value_12345
+      - SENDGRID_API_KEY=demo_sendgrid_api_key_placeholder_12345
     depends_on:
       - db
       - redis

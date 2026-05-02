@@ -51,6 +51,45 @@
     </div>
 </div>
 
+<!-- Fix with Bob Button -->
+{% if result.locations_found > 0 %}
+<div class="card shadow-sm rounded-4 mb-4 border-primary">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2 class="h5 mb-2">🤖 Automated Fix with IBM Bob</h2>
+                <p class="text-muted mb-0">Bob can automatically replace all hardcoded secrets with environment variables in one click!</p>
+            </div>
+            <div>
+                <button id="fixWithBobBtn" class="btn btn-primary btn-lg me-2" onclick="fixAllSecretsWithBob()">
+                    <i class="bi bi-magic"></i> Fix with Bob
+                </button>
+                <button id="revertBtn" class="btn btn-outline-secondary btn-lg" onclick="revertToDefault()">
+                    <i class="bi bi-arrow-counterclockwise"></i> Revert to Default
+                </button>
+            </div>
+        </div>
+        
+        <!-- Progress and Results Area -->
+        <div id="fixProgress" class="mt-3 d-none">
+            <div class="progress mb-2">
+                <div id="fixProgressBar" class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 0%"></div>
+            </div>
+            <div id="fixStatus" class="text-muted small"></div>
+        </div>
+        
+        <div id="fixResults" class="mt-3 d-none">
+            <div class="alert alert-success">
+                <h5 class="alert-heading">✅ Secrets Fixed Successfully!</h5>
+                <p id="fixSummary" class="mb-2"></p>
+                <hr>
+                <div id="fixDetails" class="small"></div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 {% if result.locations_found == 0 %}
 <div class="text-center p-10 bg-green-50 rounded-lg border-2 border-green-200">
     <h2 class="text-2xl font-bold text-green-700">✅ Your Repository is Secure!</h2>
@@ -218,7 +257,169 @@ async function previewFix(filePath, context, index, secretName) {
         console.error('Error:', error);
     }
 }
+
+async function fixAllSecretsWithBob() {
+    const btn = document.getElementById('fixWithBobBtn');
+    const progressDiv = document.getElementById('fixProgress');
+    const resultsDiv = document.getElementById('fixResults');
+    const progressBar = document.getElementById('fixProgressBar');
+    const statusText = document.getElementById('fixStatus');
+    const summaryText = document.getElementById('fixSummary');
+    const detailsDiv = document.getElementById('fixDetails');
+    
+    // Disable button and show progress
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Bob is working...';
+    progressDiv.classList.remove('d-none');
+    resultsDiv.classList.add('d-none');
+    
+    // Animate progress
+    let progress = 0;
+    const progressInterval = setInterval(() => {
+        progress += 5;
+        if (progress <= 90) {
+            progressBar.style.width = progress + '%';
+        }
+    }, 100);
+    
+    statusText.textContent = '🔍 Analyzing secrets...';
+    
+    try {
+        // Get repo path and secret name from the page
+        const repoPath = '{{ request.form.get("repo_path", "sample-vulnerable-repo") }}';
+        const secretName = '{{ result.secret_name }}';
+        
+        statusText.textContent = '🔧 Replacing hardcoded secrets with environment variables...';
+        
+        const response = await fetch('/api/fix-all-secrets', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                repo_path: repoPath,
+                secret_name: secretName
+            })
+        });
+        
+        const data = await response.json();
+        
+        // Complete progress
+        clearInterval(progressInterval);
+        progressBar.style.width = '100%';
+        progressBar.classList.remove('progress-bar-animated');
+        
+        if (data.success) {
+            statusText.textContent = '✅ All secrets fixed!';
+            
+            // Show results
+            setTimeout(() => {
+                progressDiv.classList.add('d-none');
+                resultsDiv.classList.remove('d-none');
+                
+                summaryText.innerHTML = `
+                    <strong>${data.fixed_count}</strong> secrets replaced with environment variables.<br>
+                    ${data.env_file_created ? '<strong>.env.example</strong> file created with all required variables.' : ''}<br>
+                    ${data.backup_created ? `Backup created at: <code>${data.backup_path}</code>` : ''}
+                `;
+                
+                // Show details
+                let detailsHTML = '<ul class="mb-0">';
+                for (const detail of data.details) {
+                    if (detail.status === 'fixed') {
+                        detailsHTML += `<li>✅ ${detail.file}:${detail.line} - ${detail.message}</li>`;
+                    } else if (detail.status === 'created') {
+                        detailsHTML += `<li>📄 ${detail.file} - ${detail.message}</li>`;
+                    } else if (detail.status === 'failed') {
+                        detailsHTML += `<li>❌ ${detail.file}:${detail.line} - ${detail.message}</li>`;
+                    }
+                }
+                detailsHTML += '</ul>';
+                
+                if (data.env_vars && Object.keys(data.env_vars).length > 0) {
+                    detailsHTML += '<hr><strong>Environment Variables Created:</strong><ul class="mb-0">';
+                    for (const [varName, placeholder] of Object.entries(data.env_vars)) {
+                        detailsHTML += `<li><code>${varName}=${placeholder}</code></li>`;
+                    }
+                    detailsHTML += '</ul>';
+                }
+                
+                detailsDiv.innerHTML = detailsHTML;
+                
+                // Update button and show revert button
+                btn.innerHTML = '✅ Fixed!';
+                btn.classList.remove('btn-primary');
+                btn.classList.add('btn-success');
+            }, 500);
+        } else {
+            statusText.textContent = '❌ Fix failed';
+            progressBar.classList.remove('progress-bar-animated');
+            progressBar.classList.add('bg-danger');
+            
+            setTimeout(() => {
+                alert('Failed to fix secrets: ' + data.message);
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-magic"></i> Fix with Bob';
+                progressDiv.classList.add('d-none');
+            }, 1000);
+        }
+    } catch (error) {
+        clearInterval(progressInterval);
+        statusText.textContent = '❌ Connection failed';
+        progressBar.classList.remove('progress-bar-animated');
+        progressBar.classList.add('bg-danger');
+        
+        setTimeout(() => {
+            alert('Error: ' + error.message);
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-magic"></i> Fix with Bob';
+            progressDiv.classList.add('d-none');
+        }, 1000);
+        console.error('Error:', error);
+    }
+}
+
+async function revertToDefault() {
+    const btn = document.getElementById('revertBtn');
+    const fixBtn = document.getElementById('fixWithBobBtn');
+    const resultsDiv = document.getElementById('fixResults');
+    
+    if (!confirm('Are you sure you want to revert the repository back to its original state with hardcoded secrets?')) {
+        return;
+    }
+    
+    // Disable button and show loading
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Reverting...';
+    
+    try {
+        const repoPath = '{{ request.form.get("repo_path", "sample-vulnerable-repo") }}';
+        
+        const response = await fetch('/api/revert-repo', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                repo_path: repoPath
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success && data.reverted) {
+            // Redirect to home page to re-scan and show secrets
+            window.location.href = '/';
+        } else {
+            alert(data.message || 'Failed to revert repository');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-arrow-counterclockwise"></i> Revert to Default';
+        }
+    } catch (error) {
+        alert('Error: ' + error.message);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-arrow-counterclockwise"></i> Revert to Default';
+        console.error('Error:', error);
+    }
+}
 </script>
+{% endif %}
 {% endif %}
 {% endif %}
 {% endblock %}
