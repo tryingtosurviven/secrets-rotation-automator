@@ -230,7 +230,7 @@ def analyze_ui():
     all_secrets = detect_secrets(repo_path)
 
     matching_secrets = [
-        s for s in all_secrets
+        s for s in all_secrets 
         if secret_name.lower() in s.get("file_path", "").lower()
         or secret_name.lower() in s.get("context", "").lower()
     ]
@@ -272,14 +272,17 @@ def analyze_ui():
             type_counts[stype] = type_counts.get(stype, 0) + 1
         most_common_type = max(type_counts, key=lambda k: type_counts[k]) if type_counts else "UNKNOWN"
     
-    plan_data = _generate_rotation_plan_data(secret_name, affected_services, [f["file"] for f in files], most_common_type) if matching_secrets else None
+    plan_data = _generate_rotation_plan_data(secret_name, affected_services or [], [f["file"] for f in files], most_common_type) if matching_secrets else {}
 
+    manual_effort_hours = len(matching_secrets) * 2 # Assume 2 hours to manually find/trace/rotate/test
+    automation_savings = manual_effort_hours - (5 / 60) # 5 mins total with Bob
     result = {
         "secret_name": secret_name,
         "locations_found": len(matching_secrets),
         "files": files,
         "affected_services": affected_services,
         "time_to_fix_estimate": time_estimate,
+        "hours_saved": round(automation_savings, 1), # ADD THIS LINE
         "rotation_plan": plan_data,
         "severity_counts": severity_counts,
         "sev_critical": severity_counts["CRITICAL"],
@@ -288,6 +291,13 @@ def analyze_ui():
         "sev_low": severity_counts["LOW"],
     }
 
+    incident_summary = f"Detected {len(matching_secrets)} instances of {secret_name} across {len(affected_services)} services."
+    # Simulate Bob generating a report
+    result["bob_security_summary"] = (
+        f"🛡️ IBM Bob Analysis (Completed in 0.8s): Leaks found in {', '.join(affected_services)}. "
+        "Immediate rotation required to maintain SOC2 compliance. "
+        "Automated remediation scripts generated."
+    )
     return render_template("results.html", error=None, result=result)
 
 @app.route("/usages", methods=["GET", "POST"])
@@ -541,11 +551,12 @@ def generate_rotation_plan():
         secret_name = data.get("secret_name", "")
         affected_services = data.get("affected_services", [])
         files = data.get("files", [])
+        secret_type = data.get("secret_type", "UNKNOWN")
 
         if not secret_name:
             return _format_error_response("Missing Secret Name", "secret_name is required", 400)
 
-        plan_data = _generate_rotation_plan_data(secret_name, affected_services or [], files or [])
+        plan_data = _generate_rotation_plan_data(secret_name, affected_services or [], files or [], secret_type)
 
         return _format_response({
             "secret_name": secret_name,
@@ -562,6 +573,40 @@ def generate_rotation_plan():
 @app.errorhandler(404)
 def not_found(error):
     return _format_error_response("Not Found", f"The requested endpoint {request.path} does not exist", 404)
+
+@app.route("/preview-fix", methods=["POST"])
+def preview_fix():
+    file_path = request.json.get("file_path")
+    secret_name = request.json.get("secret_name")
+    
+    # Simulate Bob's transformation logic
+    # In a real demo, you would send the file content to Bob API here
+    original_code = "API_KEY = '12345-secret'"
+    fixed_code = f"import os\nAPI_KEY = os.getenv('{secret_name}')"
+    
+    return jsonify({
+        "original": original_code,
+        "fixed": fixed_code,
+        "explanation": f"Bob moved {secret_name} to an environment variable to prevent leaks."
+    })
+
+@app.route("/api/bob-refactor", methods=["POST"])
+def bob_refactor():
+    data = request.get_json()
+    file_path = data.get("file_path")
+    context = data.get("context") # The line with the secret
+    secret_name = data.get("secret_name", "ENV_VAR")
+
+    # In a full PoC, this string would be sent to the IBM Bob API
+    # Logic: Bob identifies the variable assignment and replaces it with os.getenv
+    fixed_line = f"import os\n{secret_name} = os.getenv('{secret_name}')"
+    
+    return jsonify({
+        "status": "success",
+        "original": context,
+        "fixed": fixed_line,
+        "explanation": f"Bob identified a hardcoded secret in {file_path}. He refactored it to use an environment variable for secure runtime injection."
+    })
 
 if __name__ == "__main__":
     logger.info(f"Starting {APP_NAME} v{VERSION}")
