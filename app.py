@@ -32,6 +32,8 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+app.config["TEMPLATES_AUTO_RELOAD"] = True
+
 CORS(app)
 
 app.config["JSON_SORT_KEYS"] = False
